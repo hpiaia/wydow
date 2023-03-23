@@ -13,6 +13,14 @@ export type SendPacket = {
 }
 
 const api = {
+    onConnectionsChanged: (callback: (connectionIds: string[]) => void) => {
+        ipcRenderer.on('connections_changed', (_, connectionIds: string[]) => callback(connectionIds))
+
+        return () => {
+            ipcRenderer.removeAllListeners('connections_changed')
+        }
+    },
+
     onPacket: (callback: (data: OnPacketData) => void) => {
         ipcRenderer.on('packet_received', (_, data: OnPacketData) => callback(data))
 

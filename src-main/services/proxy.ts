@@ -53,16 +53,19 @@ export function createProxyServer({
     remoteHost,
     remotePort,
     onPacketReceived,
+    onConnectionsChanged,
 }: {
     remoteHost: string
     remotePort: number
     onPacketReceived?: (direction: 'upstream' | 'downstream', data: Buffer) => void
+    onConnectionsChanged?: (connectionIds: string[]) => void
 }) {
     return createServer((client) => {
         const server = createConnection(remotePort, remoteHost)
         const connection = connections.create({ client, server })
 
         info(`Connection created: ${connection.id}`)
+        onConnectionsChanged?.(connections.ids())
 
         client.on('data', (data) => {
             server.write(data)
@@ -89,21 +92,19 @@ export function createProxyServer({
         client.on('close', () => {
             server.destroy()
             connections.remove(connection)
+            onConnectionsChanged?.(connections.ids())
         })
 
         server.on('close', () => {
             client.destroy()
-            connections.remove(connection)
         })
 
         client.on('error', () => {
             server.destroy()
-            connections.remove(connection)
         })
 
         server.on('error', () => {
             client.destroy()
-            connections.remove(connection)
         })
     })
 }

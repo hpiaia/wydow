@@ -30,13 +30,13 @@ export function createConnectionStore() {
         connections = connections.filter((c) => c.id !== connection.id)
     }
 
-    function all() {
-        return connections
+    function ids() {
+        return connections.map((connection) => connection.id)
     }
 
     return {
         create,
         remove,
-        all,
+        ids,
     }
 }

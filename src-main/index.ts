@@ -33,8 +33,11 @@ const createWindow = (): void => {
         mainWindow.webContents.send('packet_received', data)
     })
 
+    ipcMain.addListener('connections_changed', (connectionIds: string[]) => {
+        mainWindow.webContents.send('connections_changed', connectionIds)
+    })
+
     mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY)
-    mainWindow.webContents.openDevTools({ mode: 'bottom' })
 }
 
 // This method will be called when Electron has finished
@@ -71,6 +74,9 @@ createProxyServer({
     remotePort: 8281,
     onPacketReceived: (direction, packet) => {
         ipcMain.emit('packet_received', { direction, packet: packet.toString('hex') })
+    },
+    onConnectionsChanged: (connectionIds) => {
+        ipcMain.emit('connections_changed', connectionIds)
     },
 }).listen({ port: 8281 }, () => {
     info('Proxy server listening on port 5466...')
