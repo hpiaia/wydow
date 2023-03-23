@@ -3,6 +3,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 export type OnPacketData = {
+    connectionId: string
     direction: 'upstream' | 'downstream'
     packet: string
 }
@@ -13,6 +14,10 @@ export type SendPacket = {
 }
 
 const api = {
+    getConnections: async () => {
+        return (await ipcRenderer.invoke('get_connections')) as string[]
+    },
+
     onConnectionsChanged: (callback: (connectionIds: string[]) => void) => {
         ipcRenderer.on('connections_changed', (_, connectionIds: string[]) => callback(connectionIds))
 
@@ -29,11 +34,15 @@ const api = {
         }
     },
 
-    sendPacket: (data: SendPacket) => {
-        ipcRenderer.send('send_packet', data)
+    sendClientPacket: (data: SendPacket) => {
+        ipcRenderer.send('send_client_packet', data)
+    },
+
+    sendServerPacket: (data: SendPacket) => {
+        ipcRenderer.send('send_server_packet', data)
     },
 }
 
 export type Api = typeof api
 
-contextBridge.exposeInMainWorld('wydow', api)
+contextBridge.exposeInMainWorld('WydowAPI', api)

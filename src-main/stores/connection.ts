@@ -1,7 +1,19 @@
 import { Socket } from 'node:net'
 import { v4 as uuidv4 } from 'uuid'
 
+import { encrypt } from '../lib/encryption'
+
 function createConnection({ client, server }: { client: Socket; server: Socket }) {
+    const sendClientPacket = (data: string) => {
+        const buffer = encrypt(Buffer.from(data, 'hex'))
+        client.write(buffer)
+    }
+
+    const sendServerPacket = (data: string) => {
+        const buffer = encrypt(Buffer.from(data, 'hex'))
+        server.write(buffer)
+    }
+
     return {
         id: uuidv4(),
         buffer: {
@@ -12,6 +24,8 @@ function createConnection({ client, server }: { client: Socket; server: Socket }
             client,
             server,
         },
+        sendClientPacket,
+        sendServerPacket,
     }
 }
 
@@ -34,9 +48,25 @@ export function createConnectionStore() {
         return connections.map((connection) => connection.id)
     }
 
+    function sendClientPacket(connectionId: string, data: string) {
+        const connection = connections.find((c) => c.id === connectionId)
+        if (connection) {
+            connection.sendClientPacket(data)
+        }
+    }
+
+    function sendServerPacket(connectionId: string, data: string) {
+        const connection = connections.find((c) => c.id === connectionId)
+        if (connection) {
+            connection.sendServerPacket(data)
+        }
+    }
+
     return {
         create,
         remove,
         ids,
+        sendClientPacket,
+        sendServerPacket,
     }
 }

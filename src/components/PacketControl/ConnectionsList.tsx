@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
 
-import { api } from '../lib/api'
+import { api } from '../../lib/api'
 
 export default function ConnectionsList() {
     const [connectionIds, setConnectionIds] = useState<string[]>([])
 
+    async function refreshConnections() {
+        setConnectionIds(await api.getConnections())
+    }
+
     useEffect(() => {
+        refreshConnections()
+
         return api.onConnectionsChanged((connectionIds) => {
             setConnectionIds(connectionIds)
         })
@@ -13,12 +19,7 @@ export default function ConnectionsList() {
 
     return (
         <div>
-            <h1>Active connections</h1>
-
-            {connectionIds.length === 0 && <p>No active connections.</p>}
-            {connectionIds.length === 1 && <p>There is 1 active connection.</p>}
-            {connectionIds.length > 1 && <p>There are {connectionIds.length} connections.</p>}
-
+            <h1>Active connections: {connectionIds.length}</h1>
             <ul>
                 {connectionIds.map((connectionId) => (
                     <li key={connectionId}>{connectionId}</li>

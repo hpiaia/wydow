@@ -4,7 +4,7 @@ import { createConnection, createServer } from 'node:net'
 import { decrypt } from '../lib/encryption'
 import { Connection, createConnectionStore } from '../stores/connection'
 
-const connections = createConnectionStore()
+export const connections = createConnectionStore()
 
 function processData({
     connection,
@@ -26,9 +26,9 @@ function processData({
 
     connection.buffer[direction] = Buffer.concat([connection.buffer[direction], data])
 
-    // Some packets are split into multiple messages
-    // If message has less data than expected, wait for more data
-    // If message has more data than expected, keep the overflow for next iteration
+    // Some packets may be split into multiple messages
+    // If message has LESS data than expected, we wait for more data
+    // If message has MORE data than expected, we keep the overflow for next iteration
     while (connection.buffer[direction].length) {
         const messageSize = connection.buffer[direction].readUInt16LE(0)
 
@@ -57,15 +57,15 @@ export function createProxyServer({
 }: {
     remoteHost: string
     remotePort: number
-    onPacketReceived?: (direction: 'upstream' | 'downstream', data: Buffer) => void
+    onPacketReceived?: (connectionId: string, direction: 'upstream' | 'downstream', data: Buffer) => void
     onConnectionsChanged?: (connectionIds: string[]) => void
 }) {
     return createServer((client) => {
         const server = createConnection(remotePort, remoteHost)
-        const connection = connections.create({ client, server })
 
-        info(`Connection created: ${connection.id}`)
+        const connection = connections.create({ client, server })
         onConnectionsChanged?.(connections.ids())
+        info(`Connection created: ${connection.id}`)
 
         client.on('data', (data) => {
             server.write(data)
@@ -74,7 +74,7 @@ export function createProxyServer({
                 connection,
                 direction: 'upstream',
                 data,
-                onPacket: (packet) => onPacketReceived?.('upstream', packet),
+                onPacket: (packet) => onPacketReceived?.(connection.id, 'upstream', packet),
             })
         })
 
@@ -85,14 +85,16 @@ export function createProxyServer({
                 connection,
                 direction: 'downstream',
                 data,
-                onPacket: (packet) => onPacketReceived?.('downstream', packet),
+                onPacket: (packet) => onPacketReceived?.(connection.id, 'downstream', packet),
             })
         })
 
         client.on('close', () => {
             server.destroy()
+
             connections.remove(connection)
             onConnectionsChanged?.(connections.ids())
+            info(`Connection closed: ${connection.id}`)
         })
 
         server.on('close', () => {
