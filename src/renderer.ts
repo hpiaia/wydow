@@ -25,7 +25,9 @@
  *  });
  * ```
  */
+import './app'
+import { api } from './lib/api'
 
-import './index.css'
-
-console.log('👋 This message is being logged by "renderer.js", included via webpack')
+api.onPacket(({ direction, packet }) => {
+    console.log({ direction, packet })
+})

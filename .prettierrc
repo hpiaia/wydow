@@ -1,5 +1,9 @@
 {
     "printWidth": 120,
     "semi": false,
-    "singleQuote": true
+    "singleQuote": true,
+    "importOrder": ["^[./]"],
+    "importOrderSeparation": true,
+    "importOrderSortSpecifiers": true,
+    "importOrderGroupNamespaceSpecifiers": true
 }
