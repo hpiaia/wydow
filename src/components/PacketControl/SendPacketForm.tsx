@@ -1,17 +1,17 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 import { api } from '../../lib/api'
+import Button from '../Ui/Button'
 
 export default function SendPacketForm() {
     const [connectionId, setConnectionId] = useState<string>('')
     const [packetData, setPacketData] = useState<string>('')
 
-    function sendClientPacket() {
-        api.sendClientPacket({ connectionId, packet: packetData })
-    }
-
-    function sendServerPacket() {
-        api.sendServerPacket({ connectionId, packet: packetData })
+    async function sendPacket(direction: 'upstream' | 'downstream') {
+        if (!connectionId || !packetData) return
+        const success = await api.sendPacket({ direction, connectionId, data: packetData })
+        if (!success) toast.error('Fail to send packet, invalid connection ID')
     }
 
     return (
@@ -35,9 +35,9 @@ export default function SendPacketForm() {
                 />
             </div>
 
-            <div>
-                <button onClick={sendClientPacket}>Send client packet</button>
-                <button onClick={sendServerPacket}>Send server packet</button>
+            <div className="flex space-x-4 mt-6">
+                <Button onClick={() => sendPacket('downstream')}>Send client packet</Button>
+                <Button onClick={() => sendPacket('upstream')}>Send server packet</Button>
             </div>
         </div>
     )

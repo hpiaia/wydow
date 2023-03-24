@@ -1,7 +1,7 @@
 import { BrowserWindow, app, ipcMain } from 'electron'
 import { info } from 'electron-log'
 
-import type { OnPacketData, SendPacket } from './preload'
+import type { OnPacket, SendPacket } from './preload'
 import { connections, createProxyServer } from './services/proxy'
 import { createSLServer } from './services/serverlist'
 
@@ -18,8 +18,6 @@ if (require('electron-squirrel-startup')) {
     app.quit()
 }
 
-app.disableHardwareAcceleration()
-
 const createWindow = (): void => {
     const mainWindow = new BrowserWindow({
         width: 1366,
@@ -29,12 +27,12 @@ const createWindow = (): void => {
         },
     })
 
-    ipcMain.addListener('packet_received', (data: OnPacketData) => {
-        mainWindow.webContents.send('packet_received', data)
-    })
-
     ipcMain.addListener('connections_changed', (connectionIds: string[]) => {
         mainWindow.webContents.send('connections_changed', connectionIds)
+    })
+
+    ipcMain.addListener('packet_received', (data: OnPacket) => {
+        mainWindow.webContents.send('packet_received', data)
     })
 
     mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY)
@@ -72,8 +70,8 @@ createSLServer().listen({ port: 5467 }, () => {
 createProxyServer({
     remoteHost: '51.81.0.93',
     remotePort: 8281,
-    onPacketReceived: (connectionId, direction, packet) => {
-        ipcMain.emit('packet_received', { connectionId, direction, packet: packet.toString('hex') })
+    onPacketReceived: (connectionId, direction, data) => {
+        ipcMain.emit('packet_received', { connectionId, direction, data: data.toString('hex') })
     },
     onConnectionsChanged: (connectionIds) => {
         ipcMain.emit('connections_changed', connectionIds)
@@ -86,12 +84,7 @@ ipcMain.handle('get_connections', () => {
     return connections.ids()
 })
 
-ipcMain.on('send_client_packet', (_, { connectionId, packet }: SendPacket) => {
-    if (!connectionId || !packet) return
-    connections.sendClientPacket(connectionId, packet)
-})
-
-ipcMain.on('send_server_packet', (_, { connectionId, packet }: SendPacket) => {
-    if (!connectionId || !packet) return
-    connections.sendServerPacket(connectionId, packet)
+ipcMain.handle('send_packet', (_, { direction, connectionId, data }: SendPacket) => {
+    if (!connectionId || !data) return false
+    return connections.sendPacket({ direction, connectionId, data })
 })

@@ -2,15 +2,16 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { contextBridge, ipcRenderer } from 'electron'
 
-export type OnPacketData = {
-    connectionId: string
+export type OnPacket = {
     direction: 'upstream' | 'downstream'
-    packet: string
+    connectionId: string
+    data: string
 }
 
 export type SendPacket = {
+    direction: 'upstream' | 'downstream'
     connectionId: string
-    packet: string
+    data: string
 }
 
 const api = {
@@ -26,20 +27,16 @@ const api = {
         }
     },
 
-    onPacket: (callback: (data: OnPacketData) => void) => {
-        ipcRenderer.on('packet_received', (_, data: OnPacketData) => callback(data))
+    onPacket: (callback: (data: OnPacket) => void) => {
+        ipcRenderer.on('packet_received', (_, data: OnPacket) => callback(data))
 
         return () => {
             ipcRenderer.removeAllListeners('packet_received')
         }
     },
 
-    sendClientPacket: (data: SendPacket) => {
-        ipcRenderer.send('send_client_packet', data)
-    },
-
-    sendServerPacket: (data: SendPacket) => {
-        ipcRenderer.send('send_server_packet', data)
+    sendPacket: async (data: SendPacket) => {
+        return (await ipcRenderer.invoke('send_packet', data)) as boolean
     },
 }
 
