@@ -11,11 +11,13 @@ function processData({
     direction,
     data,
     onPacket,
+    onConnectionsChanged,
 }: {
     connection: Connection
     direction: 'upstream' | 'downstream'
     data: Buffer
     onPacket?: (packet: Buffer) => void
+    onConnectionsChanged?: (connectionIds: { id: string; isStable: boolean }[]) => void
 }) {
     if (data.length <= 4) return
 
@@ -39,6 +41,14 @@ function processData({
 
         const decrypted = decrypt(connection.buffer[direction].subarray(0, messageSize))
 
+        // Check for connection stability
+        if (direction === 'upstream' && !connection.isStable) {
+            const key = decrypted.readUint8(2)
+            const isStable = connection.checkStability(key)
+            if (isStable) info(`Connection ${connection.id} is stable now`)
+            onConnectionsChanged?.(connections.list())
+        }
+
         // Ignore packets with empty ids and world creation packets
         if (decrypted.readUint16LE(4) !== 0 && decrypted.readUint16LE(4) !== 15900) {
             onPacket?.(decrypted)
@@ -58,14 +68,15 @@ export function createProxyServer({
     remoteHost: string
     remotePort: number
     onPacketReceived?: (connectionId: string, direction: 'upstream' | 'downstream', data: Buffer) => void
-    onConnectionsChanged?: (connectionIds: string[]) => void
+    onConnectionsChanged?: (connectionIds: { id: string; isStable: boolean }[]) => void
 }) {
     return createServer((client) => {
         const server = createConnection(remotePort, remoteHost)
 
         const connection = connections.create({ client, server })
-        onConnectionsChanged?.(connections.ids())
         info(`Connection created: ${connection.id}`)
+
+        onConnectionsChanged?.(connections.list())
 
         client.on('data', (data) => {
             server.write(data)
@@ -75,6 +86,7 @@ export function createProxyServer({
                 direction: 'upstream',
                 data,
                 onPacket: (packet) => onPacketReceived?.(connection.id, 'upstream', packet),
+                onConnectionsChanged,
             })
         })
 
@@ -86,6 +98,7 @@ export function createProxyServer({
                 direction: 'downstream',
                 data,
                 onPacket: (packet) => onPacketReceived?.(connection.id, 'downstream', packet),
+                onConnectionsChanged,
             })
         })
 
@@ -93,8 +106,9 @@ export function createProxyServer({
             server.destroy()
 
             connections.remove(connection)
-            onConnectionsChanged?.(connections.ids())
             info(`Connection closed: ${connection.id}`)
+
+            onConnectionsChanged?.(connections.list())
         })
 
         server.on('close', () => {

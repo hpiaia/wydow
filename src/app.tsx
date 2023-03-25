@@ -1,6 +1,7 @@
+import { MantineProvider } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Toaster } from 'react-hot-toast'
 import { Route, RouterProvider, createHashRouter, createRoutesFromElements } from 'react-router-dom'
 
 import { PacketControl } from './screens/PacketControl'
@@ -17,8 +18,10 @@ const router = createHashRouter(
 export function render() {
     createRoot(document.getElementById('root')).render(
         <StrictMode>
-            <RouterProvider router={router} />
-            <Toaster position="bottom-right" />
+            <MantineProvider theme={{ colorScheme: 'dark' }} withGlobalStyles withNormalizeCSS>
+                <RouterProvider router={router} />
+                <Notifications />
+            </MantineProvider>
         </StrictMode>
     )
 }

@@ -21,14 +21,15 @@ if (require('electron-squirrel-startup')) {
 const createWindow = (): void => {
     const mainWindow = new BrowserWindow({
         width: 1366,
-        height: 768,
+        height: 900,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
         },
     })
 
-    ipcMain.addListener('connections_changed', (connectionIds: string[]) => {
-        mainWindow.webContents.send('connections_changed', connectionIds)
+    ipcMain.addListener('connections_changed', (connections: { id: string; isStable: boolean }[]) => {
+        mainWindow.webContents.send('connections_changed', connections)
     })
 
     ipcMain.addListener('packet_received', (data: OnPacket) => {
@@ -68,7 +69,7 @@ createSLServer().listen({ port: 5467 }, () => {
 })
 
 createProxyServer({
-    remoteHost: '51.81.0.93',
+    remoteHost: '51.81.0.90',
     remotePort: 8281,
     onPacketReceived: (connectionId, direction, data) => {
         ipcMain.emit('packet_received', { connectionId, direction, data: data.toString('hex') })
@@ -81,7 +82,7 @@ createProxyServer({
 })
 
 ipcMain.handle('get_connections', () => {
-    return connections.ids()
+    return connections.list()
 })
 
 ipcMain.handle('send_packet', (_, { direction, connectionId, data }: SendPacket) => {

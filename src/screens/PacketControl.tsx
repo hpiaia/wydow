@@ -1,11 +1,13 @@
 import ConnectionsList from '../components/PacketControl/ConnectionsList'
-import SendPacketForm from '../components/PacketControl/SendPacketForm'
+import PacketList from '../components/PacketControl/PacketList'
+import SendPacket from '../components/PacketControl/SendPacket'
 
 export function PacketControl() {
     return (
         <div>
             <ConnectionsList />
-            <SendPacketForm />
+            <SendPacket />
+            <PacketList />
         </div>
     )
 }

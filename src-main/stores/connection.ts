@@ -3,33 +3,49 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { encrypt } from '../lib/encryption'
 
-function createConnection({ client, server }: { client: Socket; server: Socket }) {
-    const sendPacket = ({ direction, data }: { direction: 'upstream' | 'downstream'; data: string }) => {
-        const buffer = encrypt(Buffer.from(data, 'hex'))
-        return direction === 'upstream' ? server.write(buffer) : client.write(buffer)
+export class Connection {
+    public id: string
+    public isStable = false
+    public buffer: {
+        upstream: Buffer
+        downstream: Buffer
     }
 
-    return {
-        id: uuidv4(),
-        buffer: {
+    private lastKey = 0
+
+    constructor(
+        public socket: {
+            client: Socket
+            server: Socket
+        }
+    ) {
+        this.id = uuidv4()
+        this.buffer = {
             upstream: Buffer.alloc(0),
             downstream: Buffer.alloc(0),
-        },
-        socket: {
-            client,
-            server,
-        },
-        sendPacket,
+        }
+    }
+
+    public sendPacket({ direction, data }: { direction: 'upstream' | 'downstream'; data: string }) {
+        const buffer = encrypt(Buffer.from(data, 'hex'))
+        return direction === 'upstream' ? this.socket.server.write(buffer) : this.socket.client.write(buffer)
+    }
+
+    public checkStability(key: number) {
+        if (this.lastKey === key) {
+            return (this.isStable = true)
+        }
+
+        this.lastKey = key
+        return (this.isStable = false)
     }
 }
-
-export type Connection = ReturnType<typeof createConnection>
 
 export function createConnectionStore() {
     let connections: Connection[] = []
 
     function create({ client, server }: { client: Socket; server: Socket }) {
-        const connection = createConnection({ client, server })
+        const connection = new Connection({ client, server })
         connections = [...connections, connection]
         return connection
     }
@@ -38,8 +54,11 @@ export function createConnectionStore() {
         connections = connections.filter((c) => c.id !== connection.id)
     }
 
-    function ids() {
-        return connections.map((connection) => connection.id)
+    function list() {
+        return connections.map((connection) => ({
+            id: connection.id,
+            isStable: connection.isStable,
+        }))
     }
 
     function sendPacket({
@@ -59,7 +78,7 @@ export function createConnectionStore() {
     return {
         create,
         remove,
-        ids,
+        list,
         sendPacket,
     }
 }

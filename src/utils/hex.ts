@@ -10,8 +10,8 @@ export function toNumber(hex: string) {
     return parseInt(reverse(hex), 16)
 }
 
-export function toString(hex: string) {
+export function toString(hex: string, removeNulls = true) {
     return split(hex)
-        .map((byte) => (byte === '00' ? '' : String.fromCharCode(toNumber(byte))))
+        .map((byte) => (removeNulls && byte === '00' ? '' : String.fromCharCode(toNumber(byte))))
         .join('')
 }

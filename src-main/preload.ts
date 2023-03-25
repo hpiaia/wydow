@@ -16,11 +16,13 @@ export type SendPacket = {
 
 const api = {
     getConnections: async () => {
-        return (await ipcRenderer.invoke('get_connections')) as string[]
+        return (await ipcRenderer.invoke('get_connections')) as { id: string; isStable: boolean }[]
     },
 
-    onConnectionsChanged: (callback: (connectionIds: string[]) => void) => {
-        ipcRenderer.on('connections_changed', (_, connectionIds: string[]) => callback(connectionIds))
+    onConnectionsChanged: (callback: (connections: { id: string; isStable: boolean }[]) => void) => {
+        ipcRenderer.on('connections_changed', (_, connections: { id: string; isStable: boolean }[]) =>
+            callback(connections)
+        )
 
         return () => {
             ipcRenderer.removeAllListeners('connections_changed')

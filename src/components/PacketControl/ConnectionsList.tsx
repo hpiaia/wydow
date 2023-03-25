@@ -1,28 +1,35 @@
+import { Badge } from '@mantine/core'
 import { useEffect, useState } from 'react'
 
 import { api } from '../../lib/api'
 
 export default function ConnectionsList() {
-    const [connectionIds, setConnectionIds] = useState<string[]>([])
+    const [connections, setConnections] = useState<{ id: string; isStable: boolean }[]>([])
 
     async function refreshConnections() {
-        setConnectionIds(await api.getConnections())
+        setConnections(await api.getConnections())
     }
 
     useEffect(() => {
         refreshConnections()
 
-        return api.onConnectionsChanged((connectionIds) => {
-            setConnectionIds(connectionIds)
+        return api.onConnectionsChanged((connections) => {
+            console.log('connections changed', connections)
+            setConnections(connections)
         })
     }, [])
 
     return (
         <div>
-            <h1>Active connections: {connectionIds.length}</h1>
+            <h1>Active connections: {connections.length}</h1>
             <ul>
-                {connectionIds.map((connectionId) => (
-                    <li key={connectionId}>{connectionId}</li>
+                {connections.map((connection) => (
+                    <li key={connection.id}>
+                        {connection.id}
+                        <Badge color={connection.isStable ? 'green' : 'red'} ml="sm">
+                            {connection.isStable ? 'Stable' : 'Unstable'}
+                        </Badge>
+                    </li>
                 ))}
             </ul>
         </div>
